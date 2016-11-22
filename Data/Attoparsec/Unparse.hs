@@ -24,14 +24,15 @@ type Builder = Builder.Builder
 type Printer' = StateT (TellAhead, Builder) (Either String)
 -- Functor, Applicative, Alternative, Monad, MonadPlus
 
--- | A streaming predicate on a ByteString, passed in chunks.
+-- | A streaming predicate on a ByteString, read character by character.
 -- Returns @Nothing@ when it is no longer satisfied.
--- @Tautology@ prevents the combination of @TellAhead@ values
--- to explode in size.
+-- @TellTrue@ allows to simplify @TellAhead@ values to keep a reduced
+-- complexity.
 data TellAhead
   = Tell (Maybe Word8 -> Maybe TellAhead)
   | TellTrue
 
+-- | Conjunction of predicates.
 instance Monoid TellAhead where
   mempty = TellTrue
   mappend (TellTrue) p = p
@@ -61,11 +62,8 @@ tell p = Tell $ \w_ ->
   else
     Nothing
 
-tell' :: Maybe Word8 -> TellAhead
-tell' = tell . (==)
-
 tellWord8 :: Word8 -> TellAhead
-tellWord8 = tell' . Just
+tellWord8 = tell . (==) . Just
 
 tellSatisfy :: (Word8 -> Bool) -> TellAhead
 tellSatisfy p = tell $ \w_ ->
@@ -88,17 +86,24 @@ say tellAhead =
   modify $ \(tellAhead', builder) -> (tellAhead' <> tellAhead, builder)
 
 see :: ByteString -> Printer' ()
-see b = BS.foldr (\w m -> seeWord8 w >> m) (pure ()) b
+see b = BS.foldr (\w m -> check w >> m) done b
+  where
+    done = modify $ \(tellAhead, builder) ->
+      (tellAhead, builder <> Builder.byteString b)
 
 seeWord8 :: Word8 -> Printer' ()
 seeWord8 w = do
+  check w
+  modify $ \(tellAhead, builder) -> (tellAhead, builder <> Builder.word8 w)
+
+check :: Word8 -> Printer' ()
+check w = do
   (tellAhead, builder) <- get
-  let builder' = builder <> Builder.word8 w
   case tellAhead of
-    TellTrue -> put (TellTrue, builder')
+    TellTrue -> pure ()
     Tell t -> case t (Just w) of
       Nothing -> throwError $ "seeWord8: unexpected " ++ show w
-      Just tellAhead' -> put (tellAhead', builder')
+      Just tellAhead' -> put (tellAhead', builder)
 
 seeEof :: Printer' ()
 seeEof = do
@@ -121,7 +126,7 @@ instance Attoparsec Printer where
       empty
 
   peekWord8 = star' $ \w_ -> do
-    say (tell' w_)
+    say (tell (w_ ==))
 
   string b = star $ \_ -> do
     see b
