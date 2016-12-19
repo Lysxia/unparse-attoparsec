@@ -16,6 +16,8 @@ newtype Parser x a = Parser { runParser :: P.Parser a }
     Functor, Applicative, Monad, Alternative, MonadPlus, MonadFail
   )
 
+type Parser' a = Parser a a
+
 class Profunctor p => Attoparsec p where
   -- Parsing individual bytes
 
