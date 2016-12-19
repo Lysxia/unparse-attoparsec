@@ -25,6 +25,22 @@ library
     profunctors
   default-language:    Haskell2010
 
+test-suite test-aeson
+  type: exitcode-stdio-1.0
+  hs-source-dirs: test
+  main-is: aeson.hs
+  default-language: Haskell2010
+  build-depends:
+    aeson,
+    base,
+    bytestring,
+    constraints,
+    mtl,
+    profunctors,
+    text,
+    profunctor-monad,
+    unparse-attoparsec
+
 source-repository head
   type:     git
   location: https://github.com/Lysxia/unparse-attoparsec
