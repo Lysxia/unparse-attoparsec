@@ -1,24 +1,22 @@
+{-# LANGUAGE DefaultSignatures #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module Data.Attoparsec.Profunctor where
 
+import Control.Arrow (Kleisli)
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Fail
-import Data.Profunctor
-import Data.Semigroup
 import Data.Word (Word8)
 import Data.ByteString (ByteString)
 import qualified Data.Attoparsec.ByteString as P
+import Profunctor.Monad
 import Prelude hiding (take, takeWhile)
 
-newtype Parser x a = Parser { runParser :: P.Parser a }
-  deriving (
-    Functor, Applicative, Monad, Alternative, MonadPlus, MonadFail
-  )
+class (Contravariant p, First p ~ Kleisli (Either String))
+  => Attoparsec p where
 
-type Parser' a = Parser a a
-
-class Profunctor p => Attoparsec p where
   -- Parsing individual bytes
 
   word8 :: Word8 -> p x Word8
@@ -28,7 +26,9 @@ class Profunctor p => Attoparsec p where
   satisfy :: (Word8 -> Bool) -> p Word8 Word8
   -- satisfyWith :: (Word8 -> a) -> (a -> Bool) -> p Word8 a
   skip :: (Word8 -> Bool) -> p Word8 ()
-  skip = rmap (const ()) . satisfy
+
+  default skip :: Functor (p Word8) => (Word8 -> Bool) -> p Word8 ()
+  skip = fmap (const ()) . satisfy
 
   -- Lookahead
 
@@ -40,7 +40,11 @@ class Profunctor p => Attoparsec p where
   skipWhile :: (Word8 -> Bool) -> p ByteString ()
   take :: Int -> p ByteString ByteString
   scan :: s -> (s -> Word8 -> Maybe s) -> p ByteString ByteString
-  scan = (fmap . fmap . rmap) fst runScanner
+
+  default scan
+    :: Functor (p ByteString)
+    => s -> (s -> Word8 -> Maybe s) -> p ByteString ByteString
+  scan = (fmap . fmap . fmap) fst runScanner
   runScanner :: s -> (s -> Word8 -> Maybe s) -> p ByteString (ByteString, s)
   takeWhile :: (Word8 -> Bool) -> p ByteString ByteString
   takeWhile1 :: (Word8 -> Bool) -> p ByteString ByteString
@@ -54,9 +58,16 @@ class Profunctor p => Attoparsec p where
 
   atEnd :: p Bool Bool
 
-instance Profunctor Parser where
+newtype Parser x a = Parser { runParser :: P.Parser a }
+  deriving (
+    Functor, Applicative, Monad, Alternative, MonadPlus, MonadFail
+  )
+
+type Parser' a = Parser a a
+
+instance Contravariant Parser where
+  type First Parser = Kleisli (Either String)
   lmap _ (Parser p) = Parser p
-  rmap f (Parser p) = Parser (fmap f p)
 
 instance Attoparsec Parser where
   word8 = Parser . P.word8

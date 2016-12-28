@@ -1,17 +1,22 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, FlexibleContexts #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE TypeFamilies #-}
+
 module Data.Attoparsec.Unparse where
 
 import Control.Applicative
+import Control.Arrow (Kleisli(..))
 import Control.Monad
+import Control.Monad.Reader
 import Control.Monad.State
 import Control.Monad.Except
 import Data.Maybe
 import Data.Monoid
-import Data.Profunctor
 import Data.Word (Word8)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Builder as Builder
+import Profunctor.Monad
 
 import Prelude hiding (take, takeWhile)
 
@@ -39,18 +44,25 @@ instance Monoid TellAhead where
   mappend p (TellTrue) = p
   mappend (Tell p) (Tell p') = Tell ((liftA2 . liftA2) (<>) p p')
 
-newtype Printer x a = Printer (Star Printer' x a)
+newtype Printer x a = Printer (ReaderT x Printer' a)
   deriving (
-    Functor, Applicative, Monad, Profunctor, Alternative, MonadPlus
+    Functor, Applicative, Monad, Alternative, MonadPlus
   )
+
+instance Contravariant Printer where
+  type First Printer = Kleisli (Either String)
+  lmap (Kleisli f) (Printer p) = Printer . ReaderT $ \y ->
+    case f y of
+      Right x -> runReaderT p x
+      Left e -> throwError e
 
 runPrinter :: Printer x a -> x -> Either String (LazyByteString, a)
 runPrinter (Printer p) x =
   fmap (\(a, (_, builder)) -> (Builder.toLazyByteString builder, a)) $
-    runStateT (runStar p x) mempty
+    runStateT (runReaderT p x) mempty
 
 star :: (x -> Printer' a) -> Printer x a
-star = Printer . Star
+star = Printer . ReaderT
 
 star' :: (a -> Printer' ()) -> Printer a a
 star' f = star $ liftA2 (*>) f pure

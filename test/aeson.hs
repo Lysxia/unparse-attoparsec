@@ -6,18 +6,19 @@
 
 import qualified Control.Monad as M
 import Control.Monad.Fail
-import Data.Profunctor (Profunctor(lmap))
-import Profunctor.Monad
-import Profunctor.Monad.Combinators
 
 import Data.Aeson (Value (..))
-import Data.Attoparsec.Profunctor (Attoparsec, Parser')
 import Data.Function ((&))
-import qualified Data.Attoparsec.Profunctor as A
 import Data.ByteString (ByteString)
 import Data.Text (Text)
 import Data.Word (Word8)
 import Prelude hiding (fail, (<$>), (<*>), (>>=), (<*), (*>), pure, return)
+
+import Profunctor.Monad
+import Profunctor.Monad.Combinators
+
+import Data.Attoparsec.Profunctor (Attoparsec, Parser')
+import qualified Data.Attoparsec.Profunctor as A
 
 pattern DoubleQuote :: Word8
 pattern DoubleQuote = 34
