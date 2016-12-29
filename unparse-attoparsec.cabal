@@ -1,7 +1,10 @@
 name:                unparse-attoparsec
 version:             0.1.0.0
-synopsis:            Bidirectional attoparsec parsers
-description:         Enriched attoparsec definitions to obtain unparsers.
+synopsis:            An attoparsec roundtrip
+description:
+  DRY applicative and monadic @attoparsec@ (un)parsers.
+
+  See README below.
 homepage:            https://github.com/Lysxia/unparse-attoparsec#readme
 license:             MIT
 license-file:        LICENSE
