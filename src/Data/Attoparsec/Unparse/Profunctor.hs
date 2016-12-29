@@ -1,7 +1,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Data.Attoparsec.Profunctor where
+module Data.Attoparsec.Unparse.Profunctor where
 
 import Control.Arrow (Kleisli)
 import Control.Applicative
@@ -16,7 +16,7 @@ import Data.Maybe (isJust)
 import Profunctor.Monad
 import Prelude hiding (take, takeWhile)
 
-import Data.Attoparsec.Unparse
+import Data.Attoparsec.Unparse.Printer
 
 class (Contravariant p, First p ~ Kleisli (Either String))
   => Attoparsec p where

@@ -9,14 +9,11 @@
 
 module AesonParser where
 
-import qualified Control.Monad as M
 import Control.Monad.Fail (MonadFail)
 
 import Data.Aeson (Value (..), Object, Array, encode)
 import qualified Data.Aeson.Parser as Aeson
-import qualified Data.Aeson as Aeson
 import Data.Char (ord, chr)
-import Data.Function ((&))
 import Data.ByteString (ByteString)
 import qualified Data.HashMap.Lazy as H
 import Data.Scientific (Scientific)
@@ -29,9 +26,8 @@ import Prelude hiding (fail, (<$>), (<*>), (>>=), (>>), (<*), (*>), pure, return
 import Profunctor.Monad
 import Profunctor.Monad.Combinators
 
-import Data.Attoparsec.Profunctor (Attoparsec, Parser')
-import qualified Data.Attoparsec.Profunctor as A
-import qualified Data.Attoparsec.Unparse as U
+import qualified Data.Attoparsec.Unparse as A
+import qualified Data.Attoparsec.Unparse.Printer as AP
 
 pattern C :: Char -> Word8
 pattern C c <- (chr . fromIntegral -> c) where
@@ -39,7 +35,7 @@ pattern C c <- (chr . fromIntegral -> c) where
 
 type P p a = p a a
 type AesonParser p =
-  ( Attoparsec p
+  ( A.Attoparsec p
   , Monad1 p
   , ForallF MonadFail p
   )
@@ -115,13 +111,13 @@ value = do
     _ | w >= 48 && w <= 57 || w == 45 -> aNumber scientific
     _ -> fail "not a valid json value"
   where
-    firstWordClass v = let s = A.singleton in case v of
-      String _ -> s (C '"')
-      Object _ -> s (C '{')
-      Array _ -> s (C '[')
-      Bool False -> s (C 'f')
-      Bool True -> s (C 't')
-      Null -> s (C 'n')
+    firstWordClass v = let c = A.singleton . C in case v of
+      String _ -> c '"'
+      Object _ -> c '{'
+      Array _ -> c '['
+      Bool False -> c 'f'
+      Bool True -> c 't'
+      Null -> c 'n'
       Number _ -> A.Class (\w -> w >= 48 && w <= 57 || w == 45) 45
 
     aString = (<$>) String . (=.) (\(String s) -> s)
@@ -135,7 +131,7 @@ jstring = A.word8 (C '"') *> jstring_
 
 jstring0 :: AesonParser p => P p Text
 jstring0 = A.parseOrPrint Aeson.jstring $ \t ->
-  U.seeLazyBS (encode t)
+  AP.seeLazyBS (encode t)
 
 data EscapeState = Escape | NoEscape
 

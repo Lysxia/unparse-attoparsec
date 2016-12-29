@@ -5,7 +5,6 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable (for_)
 
-import Data.Attoparsec.Profunctor
 import Data.Attoparsec.Unparse
 import AesonParser
 

@@ -13,10 +13,11 @@ build-type:          Simple
 cabal-version:       >=1.10
 
 library
-  hs-source-dirs:      .
+  hs-source-dirs:      src
   exposed-modules:
-    Data.Attoparsec.Profunctor
     Data.Attoparsec.Unparse
+    Data.Attoparsec.Unparse.Printer
+    Data.Attoparsec.Unparse.Profunctor
   build-depends:
     attoparsec,
     base >= 4.9 && < 4.10,

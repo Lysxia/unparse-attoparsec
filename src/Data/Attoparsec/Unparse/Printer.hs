@@ -2,7 +2,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE TypeFamilies #-}
 
-module Data.Attoparsec.Unparse where
+module Data.Attoparsec.Unparse.Printer where
 
 import Control.Applicative
 import Control.Arrow (Kleisli(..))
