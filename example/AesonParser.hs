@@ -33,17 +33,16 @@ pattern C :: Char -> Word8
 pattern C c <- (chr . fromIntegral -> c) where
   C c = fromIntegral (ord c)
 
-type P p a = p a a
 type AesonParser p =
   ( A.Attoparsec p
   , Monad1 p
   , ForallF MonadFail p
   )
 
-object_ :: AesonParser p => P p Object
+object_ :: AesonParser p => J p Object
 object_ = objectValues jstring0 value
 
-objectValues :: AesonParser p => P p Text -> P p Value -> P p Object
+objectValues :: AesonParser p => J p Text -> J p Value -> J p Object
 objectValues str val =
   H.toList =. do
     skipSpace
@@ -65,10 +64,10 @@ objectValues str val =
     nextWord _ [] = C '}'
     nextWord c (_ : _) = c  -- Next character if not empty
 
-array_ :: AesonParser p => P p Array
+array_ :: AesonParser p => J p Array
 array_ = arrayValues value
 
-arrayValues :: AesonParser p => P p Value -> P p Array
+arrayValues :: AesonParser p => J p Value -> J p Array
 arrayValues val =
   V.toList =. do
     skipSpace
@@ -93,7 +92,7 @@ arrayValues val =
     nextWord' [] = C ']'
     nextWord' _ = C ','
 
-value :: AesonParser p => P p Value
+value :: AesonParser p => J p Value
 value = do
   skipSpace
   w <- firstWordClass =. A.unsafePeekWord8Class'
@@ -123,17 +122,17 @@ value = do
     aNumber = (<$>) Number . (=.) (\(Number n) -> n)
 
 -- | Parse a quoted JSON string.
-jstring :: AesonParser p => P p Text
+jstring :: AesonParser p => J p Text
 jstring = A.word8 (C '"') *> jstring_
 
-jstring0 :: AesonParser p => P p Text
+jstring0 :: AesonParser p => J p Text
 jstring0 = A.parseOrPrint Aeson.jstring $ \t ->
   AP.seeLazyBS (encode t)
 
 data EscapeState = Escape | NoEscape
 
 -- | Parse a quoted JSON string without the leading quote.
-jstring_ :: AesonParser p => P p Text
+jstring_ :: AesonParser p => J p Text
 jstring_ = do
   s <- escapeText =. A.scan startState go <* A.word8 (C '"')
   case unescapeText s of
@@ -159,6 +158,6 @@ skipSpace = const "" =. A.skipWhile isSpace
 
 data SP = SP !Integer {-# UNPACK #-}!Int
 
-scientific :: AesonParser p => P p Scientific
+scientific :: AesonParser p => J p Scientific
 scientific = A.parseOrPrint undefined undefined
 
