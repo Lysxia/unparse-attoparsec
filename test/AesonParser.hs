@@ -1,3 +1,5 @@
+-- | Compare this module with aeson's 'Data.Aeson.Parser.Internal'.
+
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
