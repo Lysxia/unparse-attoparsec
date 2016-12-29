@@ -1,67 +1,37 @@
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE RebindableSyntax #-}
-{-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE OverloadedStrings #-}
 
-import qualified Control.Monad as M
-import Control.Monad.Fail
+import qualified Data.ByteString as BS
+import qualified Data.ByteString.Char8 as BS8
+import qualified Data.ByteString.Lazy as LBS
+import Data.Foldable (for_)
 
-import Data.Aeson (Value (..))
-import Data.Function ((&))
-import Data.ByteString (ByteString)
-import Data.Text (Text)
-import Data.Word (Word8)
-import Prelude hiding (fail, (<$>), (<*>), (>>=), (<*), (*>), pure, return)
+import Data.Attoparsec.Profunctor
+import Data.Attoparsec.Unparse
+import AesonParser
 
-import Profunctor.Monad
-import Profunctor.Monad.Combinators
-
-import Data.Attoparsec.Profunctor (Attoparsec, Parser')
-import qualified Data.Attoparsec.Profunctor as A
-
-pattern DoubleQuote :: Word8
-pattern DoubleQuote = 34
-
-pattern BackSlash :: Word8
-pattern BackSlash = 92
-
-type P p a = p a a
-type AesonParser p =
-  ( Attoparsec p
-  , Monad1 p
-  , ForallF MonadFail p
-  )
-
-value :: AesonParser p => P p Value
-value = undefined
-
--- | Parse a quoted JSON string.
-jstring :: forall p. AesonParser p => P p Text
-jstring = A.word8 DoubleQuote *> jstring_
-
-data EscapeState = Escape | NoEscape
-
--- | Parse a quoted JSON string without the leading quote.
-jstring_ :: forall p. AesonParser p => P p Text
-jstring_ = do
-  s <- escapeText =. A.scan startState go <* A.word8 DoubleQuote
-  case unescapeText s of
-    Right r -> pure r
-    Left err -> with @MonadFail @p @Text $
-      fail err
-  where
-    startState = NoEscape  -- seen backslash
-    go Escape c = Just NoEscape
-    go a DoubleQuote = Nothing
-    go a BackSlash = Just Escape
-    go a c = Just NoEscape
-
-unescapeText :: ByteString -> Either String Text
-unescapeText = undefined
-
-escapeText :: Text -> ByteString
-escapeText = undefined
+examples :: [BS.ByteString]
+examples =
+  [ "\"Wow\""
+  , "{\"mu:ch\\\" doge\": [null, false, true, \"beautiful\"]}"
+  ]
 
 main :: IO ()
-main = M.return ()
+main = for_ examples $ \s -> do
+  BS8.putStrLn s
+  v <- unwrap $ parse value s
+  s'_ <- unwrap $ unparse value v
+  let s' = LBS.toStrict s'_
+  v' <- unwrap $ parse value s'
+  assertEqual v v'
+  BS8.putStrLn s'
+
+unwrap :: Either String b -> IO b
+unwrap (Right b) = pure b
+unwrap (Left a) = fail a
+
+assertEqual :: (Show a, Eq a) => a -> a -> IO ()
+assertEqual a a' =
+  if a == a' then
+    pure ()
+  else
+    fail $ "Not equal: " ++ show (a, a')
