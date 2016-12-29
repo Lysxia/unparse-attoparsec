@@ -25,6 +25,7 @@ library
     mtl,
     profunctor-monad
   default-language:    Haskell2010
+  ghc-options: -Wall -Wno-name-shadowing
 
 test-suite test-aeson
   type: exitcode-stdio-1.0
@@ -33,6 +34,7 @@ test-suite test-aeson
   other-modules:
     AesonParser
   default-language: Haskell2010
+  ghc-options: -Wall -Wno-name-shadowing
   build-depends:
     aeson,
     base,
