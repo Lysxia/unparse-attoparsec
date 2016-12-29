@@ -48,8 +48,8 @@ objectValues str val =
     skipSpace
     w <- nextWord (C '"') =. A.peekWord8'
     case w of
-      C '"' -> loop []
-      _ {- '}' -} -> const w =. A.anyWord8 *> pure H.empty
+      C '}' -> const w =. A.anyWord8 *> pure H.empty
+      _ {- '"' or error -} -> loop []
   where
     loop acc = do
       k <- head =. fst =. str <* skipSpace <* A.word8 (C ':')
