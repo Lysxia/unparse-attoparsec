@@ -3,8 +3,6 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE RebindableSyntax #-}
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE ViewPatterns #-}
@@ -45,10 +43,7 @@ type AesonParser p =
 object_ :: AesonParser p => P p Object
 object_ = objectValues jstring0 value
 
-objectValues
-  :: forall p
-  .  AesonParser p
-  => P p Text -> P p Value -> P p Object
+objectValues :: AesonParser p => P p Text -> P p Value -> P p Object
 objectValues str val =
   H.toList =. do
     skipSpace
@@ -98,7 +93,7 @@ arrayValues val =
     nextWord' [] = C ']'
     nextWord' _ = C ','
 
-value :: forall p. AesonParser p => P p Value
+value :: AesonParser p => P p Value
 value = do
   skipSpace
   w <- firstWordClass =. A.unsafePeekWord8Class'
@@ -128,7 +123,7 @@ value = do
     aNumber = (<$>) Number . (=.) (\(Number n) -> n)
 
 -- | Parse a quoted JSON string.
-jstring :: forall p. AesonParser p => P p Text
+jstring :: AesonParser p => P p Text
 jstring = A.word8 (C '"') *> jstring_
 
 jstring0 :: AesonParser p => P p Text
@@ -138,7 +133,7 @@ jstring0 = A.parseOrPrint Aeson.jstring $ \t ->
 data EscapeState = Escape | NoEscape
 
 -- | Parse a quoted JSON string without the leading quote.
-jstring_ :: forall p. AesonParser p => P p Text
+jstring_ :: AesonParser p => P p Text
 jstring_ = do
   s <- escapeText =. A.scan startState go <* A.word8 (C '"')
   case unescapeText s of
