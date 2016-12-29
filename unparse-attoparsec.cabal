@@ -27,9 +27,9 @@ library
   default-language:    Haskell2010
   ghc-options: -Wall -Wno-name-shadowing
 
-test-suite test-aeson
+test-suite example-aeson
   type: exitcode-stdio-1.0
-  hs-source-dirs: test
+  hs-source-dirs: example
   main-is: aeson.hs
   other-modules:
     AesonParser

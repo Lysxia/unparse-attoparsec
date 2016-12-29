@@ -146,10 +146,10 @@ jstring_ = do
     Left err -> fail err
   where
     startState = NoEscape  -- seen backslash
-    go Escape c = Just NoEscape
-    go a (C '"') = Nothing
-    go a (C '\\') = Just Escape
-    go a c = Just NoEscape
+    go Escape _ = Just NoEscape
+    go _ (C '"') = Nothing
+    go _ (C '\\') = Just Escape
+    go _ _ = Just NoEscape
 
 unescapeText :: ByteString -> Either String Text
 unescapeText = undefined
