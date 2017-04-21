@@ -18,7 +18,7 @@ import Prelude hiding (take, takeWhile)
 
 import Data.Attoparsec.Unparse.Printer
 
-class (Contravariant p, First p ~ Kleisli (Either String))
+class (Cofunctor p, First p ~ Kleisli (Either String))
   => Attoparsec p where
 
   -- Parsing individual bytes
@@ -104,7 +104,7 @@ type Parser' a = Parser a a
 parse :: Parser x a -> ByteString -> Either String a
 parse (Parser p) = P.eitherResult . P.parse p
 
-instance Contravariant Parser where
+instance Cofunctor Parser where
   type First Parser = Kleisli (Either String)
   lmap _ (Parser p) = Parser p
 

@@ -51,7 +51,7 @@ newtype Printer x a = Printer { runPrinter :: ReaderT x Printer' a }
 instance MonadFail (Printer x) where
   fail = Printer . lift . lift . Left
 
-instance Contravariant Printer where
+instance Cofunctor Printer where
   type First Printer = Kleisli (Either String)
   lmap (Kleisli f) (Printer p) = Printer . ReaderT $ \y ->
     case f y of
