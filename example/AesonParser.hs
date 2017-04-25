@@ -2,14 +2,15 @@
 
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE ConstraintKinds #-}
+{-# LANGUAGE DataKinds #-}
 {-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RebindableSyntax #-}
+{-# LANGUAGE PartialTypeSignatures #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE ViewPatterns #-}
 
 module AesonParser where
-
-import Control.Monad.Fail (MonadFail)
 
 import Data.Aeson (Value (..), Object, Array, encode)
 import qualified Data.Aeson.Parser as Aeson
@@ -17,27 +18,28 @@ import Data.Char (ord, chr)
 import Data.ByteString (ByteString)
 import qualified Data.HashMap.Lazy as H
 import Data.Scientific (Scientific)
-import Data.String (fromString)  -- OverloadedStrings + RebindableSyntax
 import Data.Text (Text)
 import qualified Data.Vector as V
 import Data.Word (Word8)
-import Prelude hiding (fail, (<$>), (<*>), (>>=), (>>), (<*), (*>), pure, return)
-
-import Profunctor.Monad
-import Profunctor.Monad.Combinators
+import Data.Profunctor
+import GHC.Exts (Constraint)
 
 import qualified Data.Attoparsec.Unparse as A
 import qualified Data.Attoparsec.Unparse.Printer as AP
+
+type J p a = p a a
 
 pattern C :: Char -> Word8
 pattern C c <- (chr . fromIntegral -> c) where
   C c = fromIntegral (ord c)
 
-type AesonParser p =
-  ( A.Attoparsec p
-  , Monad1 p
-  , ForallF MonadFail p
-  )
+type AesonParser p = (A.Attoparsec p, Foreach Monad p As)
+
+type family Foreach c (p :: * -> * -> *) as :: Constraint where
+  Foreach c p '[] = ()
+  Foreach c p (a ': as) = (c (p a), Foreach c p as)
+
+type As = '[Object, Text, Value, [(Text, Value)], [Value]]
 
 object_ :: AesonParser p => J p Object
 object_ = objectValues jstring0 value
@@ -116,10 +118,10 @@ value = do
       Null -> c 'n'
       Number _ -> A.Class (\w -> w >= 48 && w <= 57 || w == 45) 45
 
-    aString = (<$>) String . (=.) (\(String s) -> s)
-    aObject = (<$>) Object . (=.) (\(Object o) -> o)
-    aArray  = (<$>) Array  . (=.) (\(Array  a) -> a)
-    aNumber = (<$>) Number . (=.) (\(Number n) -> n)
+    aString = dimap (\(String s) -> s) String
+    aObject = dimap (\(Object o) -> o) Object
+    aArray  = dimap (\(Array  a) -> a) Array
+    aNumber = dimap (\(Number n) -> n) Number
 
 -- | Parse a quoted JSON string.
 jstring :: AesonParser p => J p Text
@@ -145,12 +147,6 @@ jstring_ = do
     go _ (C '\\') = Just Escape
     go _ _ = Just NoEscape
 
-unescapeText :: ByteString -> Either String Text
-unescapeText = undefined
-
-escapeText :: Text -> ByteString
-escapeText = undefined
-
 skipSpace :: AesonParser p => p x ()
 skipSpace = const "" =. A.skipWhile isSpace
   where
@@ -158,6 +154,20 @@ skipSpace = const "" =. A.skipWhile isSpace
 
 data SP = SP !Integer {-# UNPACK #-}!Int
 
+-- Undefined because the bidirectional programming payoff is low.
+
+unescapeText :: ByteString -> Either String Text
+unescapeText = undefined
+
+escapeText :: Text -> ByteString
+escapeText = undefined
+
 scientific :: AesonParser p => J p Scientific
 scientific = A.parseOrPrint undefined undefined
 
+-- Find a home for this
+
+(=.) :: Profunctor p => (y -> x) -> p x a -> p y a
+(=.) = lmap
+
+infixl 5 =.

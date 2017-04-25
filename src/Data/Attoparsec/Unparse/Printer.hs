@@ -5,7 +5,6 @@
 module Data.Attoparsec.Unparse.Printer where
 
 import Control.Applicative
-import Control.Arrow (Kleisli(..))
 import Control.Monad
 import Control.Monad.Fail
 import Control.Monad.Reader
@@ -18,7 +17,7 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as LBS
 import qualified Data.ByteString.Builder as Builder
-import Profunctor.Monad
+import Data.Profunctor
 
 import Prelude hiding (take, takeWhile)
 
@@ -51,12 +50,9 @@ newtype Printer x a = Printer { runPrinter :: ReaderT x Printer' a }
 instance MonadFail (Printer x) where
   fail = Printer . lift . lift . Left
 
-instance Cofunctor Printer where
-  type First Printer = Kleisli (Either String)
-  lmap (Kleisli f) (Printer p) = Printer . ReaderT $ \y ->
-    case f y of
-      Right x -> runReaderT p x
-      Left e -> throwError e
+instance Profunctor Printer where
+  lmap f (Printer p) = Printer (withReaderT f p)
+  rmap = fmap
 
 unparse :: Printer x a -> x -> Either String LazyByteString
 unparse q x = fmap fst (unparse' q x)

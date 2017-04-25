@@ -23,10 +23,10 @@ library
     Data.Attoparsec.Unparse.Profunctor
   build-depends:
     attoparsec,
-    base >= 4.9 && < 4.10,
+    base >= 4.7 && < 4.10,
     bytestring,
     mtl,
-    profunctor-monad
+    profunctors
   default-language:    Haskell2010
   ghc-options: -Wall -Wno-name-shadowing
 
@@ -44,7 +44,6 @@ test-suite example-aeson
     bytestring,
     constraints,
     mtl,
-    profunctor-monad,
     profunctors,
     scientific,
     text,

@@ -3,7 +3,6 @@
 
 module Data.Attoparsec.Unparse.Profunctor where
 
-import Control.Arrow (Kleisli)
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Except
@@ -13,13 +12,12 @@ import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
 import qualified Data.Attoparsec.ByteString as P
 import Data.Maybe (isJust)
-import Profunctor.Monad
+import Data.Profunctor
 import Prelude hiding (take, takeWhile)
 
 import Data.Attoparsec.Unparse.Printer
 
-class (Cofunctor p, First p ~ Kleisli (Either String))
-  => Attoparsec p where
+class Profunctor p => Attoparsec p where
 
   -- Parsing individual bytes
 
@@ -67,6 +65,12 @@ class (Cofunctor p, First p ~ Kleisli (Either String))
 
   atEnd :: p Bool Bool
 
+  -- Assertion
+
+  -- | As a parser, do nothing (@return ()@); as a printer, fail if the
+  -- predicate is not satisfied, with the given error message.
+  assert :: String -> (x -> Bool) -> p x ()
+
   -- Separate definitions
 
   parseOrPrint :: P.Parser a -> (a -> Printer' ()) -> p a a
@@ -104,9 +108,9 @@ type Parser' a = Parser a a
 parse :: Parser x a -> ByteString -> Either String a
 parse (Parser p) = P.eitherResult . P.parse p
 
-instance Cofunctor Parser where
-  type First Parser = Kleisli (Either String)
+instance Profunctor Parser where
   lmap _ (Parser p) = Parser p
+  rmap f (Parser p) = Parser (fmap f p)
 
 instance Attoparsec Parser where
   word8 = Parser . P.word8
@@ -130,6 +134,7 @@ instance Attoparsec Parser where
   takeByteString = Parser P.takeByteString
   (<?>) (Parser p) = Parser . (P.<?>) p
   atEnd = Parser P.atEnd
+  assert _ _ = return ()
   parseOrPrint p _ = Parser p
 
 instance Attoparsec Printer where
@@ -218,5 +223,7 @@ instance Attoparsec Printer where
       seeEof
     else
       say (tell isJust)
+
+  assert e p = star $ \x -> when (p x) (throwError e)
 
   parseOrPrint _ q = star' q
