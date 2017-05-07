@@ -106,7 +106,7 @@ newtype Parser x a = Parser { runParser :: P.Parser a }
 type Parser' a = Parser a a
 
 parse :: Parser x a -> ByteString -> Either String a
-parse (Parser p) = P.eitherResult . P.parse p
+parse (Parser p) = P.parseOnly p
 
 instance Profunctor Parser where
   lmap _ (Parser p) = Parser p
