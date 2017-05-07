@@ -51,6 +51,18 @@ test-suite example-aeson
     unparse-attoparsec,
     vector
 
+test-suite example-regex
+  type: exitcode-stdio-1.0
+  hs-source-dirs: example
+  main-is: regex.hs
+  default-language: Haskell2010
+  ghc-options: -Wall -Wno-name-shadowing
+  build-depends:
+    base,
+    bytestring,
+    profunctor-monad,
+    unparse-attoparsec
+
 source-repository head
   type:     git
   location: https://github.com/Lysxia/unparse-attoparsec
