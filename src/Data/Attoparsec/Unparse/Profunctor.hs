@@ -63,6 +63,7 @@ class Profunctor p => Attoparsec p where
   (<?>) :: p b a -> String -> p b a
   (<?>) p _ = p
 
+  endOfInput :: p x ()
   atEnd :: p Bool Bool
 
   -- Assertion
@@ -133,6 +134,7 @@ instance Attoparsec Parser where
   takeTill = Parser . P.takeTill
   takeByteString = Parser P.takeByteString
   (<?>) (Parser p) = Parser . (P.<?>) p
+  endOfInput = Parser P.endOfInput
   atEnd = Parser P.atEnd
   assert _ _ = return ()
   parseOrPrint p _ = Parser p
@@ -217,6 +219,8 @@ instance Attoparsec Printer where
   takeByteString = star' $ \b -> do
     see b
     seeEof
+
+  endOfInput = star $ \_ -> seeEof
 
   atEnd = star' $ \eof -> do
     if eof then

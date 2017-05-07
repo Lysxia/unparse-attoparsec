@@ -119,6 +119,9 @@ data GClass
 
 type RegexParser p = (Attoparsec p, Alternative1 p)
 
+regex :: RegexParser p => J p Regex
+regex = withApplicative $ regex_ <* endOfInput
+
 regex_ :: RegexParser p => J p Regex
 regex_ = altRegex_
 
@@ -282,11 +285,11 @@ examples = fmap BS8.pack
 main :: IO ()
 main = for_ examples $ \s -> do
   BS8.putStrLn s
-  v <- unwrap $ parse regex_ s
+  v <- unwrap $ parse regex s
   print v
-  s'_ <- unwrap $ unparse regex_ v
+  s'_ <- unwrap $ unparse regex v
   let s' = LBS.toStrict s'_
-  v' <- unwrap $ parse regex_ s'
+  v' <- unwrap $ parse regex s'
   assertEqual v v'
   BS8.putStrLn s'
 
