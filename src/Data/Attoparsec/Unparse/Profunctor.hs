@@ -224,6 +224,6 @@ instance Attoparsec Printer where
     else
       say (tell isJust)
 
-  assert e p = star $ \x -> when (p x) (throwError e)
+  assert e p = star $ \x -> when (not (p x)) (throwError e)
 
   parseOrPrint _ q = star' q
