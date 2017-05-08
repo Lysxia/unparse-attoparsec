@@ -11,7 +11,8 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
 
 import Data.Attoparsec.Unparse hiding (Class)
-import Profunctor.Monad
+import Profunctor.Monad hiding (manyP, someP, sepByP, sepBy1P)
+import qualified Profunctor.Monad as PM
 
 type Regex = AltRegex
 
@@ -126,7 +127,7 @@ regex_ :: RegexParser p => J p Regex
 regex_ = altRegex_
 
 altRegex_ :: RegexParser p => J p AltRegex
-altRegex_ = withFunctor $ AltRegex <$> unAltRegex =. sepP (word8 (c_ '|')) seqRegex_
+altRegex_ = withFunctor $ AltRegex <$> unAltRegex =. sepByP seqRegex_ (word8 (c_ '|'))
 
 seqRegex_ :: RegexParser p => J p SeqRegex
 seqRegex_ = withFunctor $ SeqRegex <$> unSeqRegex =. manyP quantifiedRegex_
@@ -247,34 +248,14 @@ special_ = withAlternative $ asum $ do
     _ <- word8 (c_ c)
     return e
 
-sepP
-  :: RegexParser p
-  => p () b -> p x a -> p [x] [a]
-sepP s p = withAlternative $
-  (assert "empty list" (not . null) *> liftA2 (:) (head =. p) (tail =. sepP' s p))
-  <|> pure []
-
-sepP'
-  :: RegexParser p
-  => p () b -> p x a -> p [x] [a]
-sepP' s p = manyP (withApplicative $ const () =. s *> p)
-
-manyP
-  :: RegexParser p
-  => p x a -> p [x] [a]
-manyP p = withAlternative $ someP p <|> pure []
-
-someP
-  :: RegexParser p
-  => p x a -> p [x] [a]
-someP p = withAlternative $ do
-  () <- assert "empty list" (not . null)
-  a <- head =. p
-  as <- tail =. manyP p
-  return (a : as)
-
 c_ :: Char -> Word8
 c_ = fromIntegral . fromEnum
+
+manyP :: RegexParser p => J p a -> J p [a]
+manyP = PM.manyP (assert "empty list")
+
+sepByP :: RegexParser p => J p a -> p () b -> J p [a]
+sepByP = PM.sepByP (assert "empty list")
 
 examples :: [BS.ByteString]
 examples = fmap BS8.pack
