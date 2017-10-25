@@ -23,7 +23,7 @@ library
     Data.Attoparsec.Unparse.Profunctor
   build-depends:
     attoparsec,
-    base >= 4.7 && < 4.10,
+    base >= 4.7 && < 4.11,
     bytestring,
     mtl,
     profunctors

@@ -2,5 +2,7 @@ flags: {}
 extra-package-dbs: []
 packages:
 - '.'
+- location: '../profunctor-monad'
+  extra-dep: true
 extra-deps: []
-resolver: nightly-2017-04-24
+resolver: nightly-2017-10-25
