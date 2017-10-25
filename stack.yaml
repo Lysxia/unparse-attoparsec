@@ -4,5 +4,9 @@ packages:
 - '.'
 - location: '../profunctor-monad'
   extra-dep: true
-extra-deps: []
+extra-deps:
+- ghc-proofs-0.1.1
 resolver: nightly-2017-10-25
+flags:
+  unparse-attoparsec:
+    proofs: true

@@ -15,12 +15,18 @@ build-type:          Simple
 -- extra-source-files:
 cabal-version:       >=1.10
 
+flag proofs
+  description: Build examples with proofs
+  default: False
+  manual: True
+
 library
   hs-source-dirs:      src
   exposed-modules:
     Data.Attoparsec.Unparse
     Data.Attoparsec.Unparse.Printer
     Data.Attoparsec.Unparse.Profunctor
+    Data.Attoparsec.Unparse.Projection
   build-depends:
     attoparsec,
     base >= 4.7 && < 4.11,
@@ -50,6 +56,11 @@ test-suite example-aeson
     unordered-containers,
     unparse-attoparsec,
     vector
+  if flag(proofs)
+    other-modules:
+      AesonProof
+    build-depends:
+      ghc-proofs
 
 test-suite example-regex
   type: exitcode-stdio-1.0
