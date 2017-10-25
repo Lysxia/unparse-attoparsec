@@ -1,12 +1,12 @@
 {-# LANGUAGE ApplicativeDo #-}
 {-# LANGUAGE ConstraintKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE MonoLocalBinds #-}
 
 import Control.Applicative
 import Data.Char (isAlphaNum)
 import Data.Foldable (for_, asum)
 import Data.Word (Word8)
-import Prelude hiding (group)
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
@@ -55,6 +55,7 @@ isGroup _ = False
 
 groupBody :: AtomicRegex -> Regex
 groupBody (Group e) = e
+groupBody c = error $ "groupBody: " ++ show c
 
 isClass :: AtomicRegex -> Bool
 isClass (Class _ _) = True
@@ -62,9 +63,11 @@ isClass _ = False
 
 classType :: AtomicRegex -> ClassType
 classType (Class t _) = t
+classType c = error $ "classType: " ++ show c
 
 classAtoms :: AtomicRegex -> [ClassAtom]
 classAtoms (Class _ a) = a
+classAtoms c = error $ "classAtoms: " ++ show c
 
 isChar :: AtomicRegex -> Bool
 isChar (Char _) = True
@@ -72,6 +75,7 @@ isChar _ = False
 
 char :: AtomicRegex -> Word8
 char (Char c) = c
+char c = error $ "char: " ++ show c
 
 isGClass :: AtomicRegex -> Bool
 isGClass (GClass _) = True
@@ -79,6 +83,7 @@ isGClass _ = False
 
 unGClass :: AtomicRegex -> GClass
 unGClass (GClass g) = g
+unGClass c = error $ "unGClass: " ++ show c
 
 data ClassType = Include | Exclude
   deriving (Eq, Ord, Show)
@@ -96,9 +101,11 @@ isCRange _ = False
 
 cRangeStart :: ClassAtom -> Word8
 cRangeStart (CRange start _) = start
+cRangeStart c = error $ "cRangeStart: " ++ show c
 
 cRangeEnd :: ClassAtom -> Word8
 cRangeEnd (CRange _ end) = end
+cRangeEnd c = error $ "cRangeEnd: " ++ show c
 
 isCChar :: ClassAtom -> Bool
 isCChar (CChar _) = True
@@ -106,9 +113,11 @@ isCChar _ = False
 
 unCChar :: ClassAtom -> Word8
 unCChar (CChar c) = c
+unCChar c = error $ "unCChar: " ++ show c
 
 unCGClass :: ClassAtom -> GClass
 unCGClass (CGClass g) = g
+unCGClass c = error $ "unCGClass: " ++ show c
 
 data GClass
   = Digit
