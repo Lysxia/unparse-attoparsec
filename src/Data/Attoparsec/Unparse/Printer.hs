@@ -12,6 +12,7 @@ import Control.Monad.State
 import Control.Monad.Except
 import Data.Maybe
 import Data.Monoid
+import qualified Data.Semigroup as Semi
 import Data.Word (Word8)
 import Data.ByteString (ByteString)
 import qualified Data.ByteString as BS
@@ -38,9 +39,12 @@ data TellAhead
 -- | Conjunction of predicates.
 instance Monoid TellAhead where
   mempty = TellTrue
-  mappend (TellTrue) p = p
-  mappend p (TellTrue) = p
-  mappend (Tell p) (Tell p') = Tell ((liftA2 . liftA2) (<>) p p')
+  mappend = (Semi.<>)
+
+instance Semi.Semigroup TellAhead where
+  TellTrue <> p = p
+  p <> TellTrue = p
+  Tell p <> Tell p' = Tell ((liftA2 . liftA2) (<>) p p')
 
 newtype Printer x a = Printer { runPrinter :: ReaderT x Printer' a }
   deriving (
