@@ -1,7 +1,8 @@
 Unparse attoparsec
 ==================
 
-Define an `attoparsec` parser, get a DRY printer.
+This library provides an interface to build programs that can be
+interpreted both as parsers and as printers.
 
 This library essentially defines two types:
 
@@ -11,21 +12,12 @@ This library essentially defines two types:
 and a type class `Attoparsec`, instantiated by `Parser` and `Printer`, wrapping
 `attoparsec`'s core operations (including lookaheads!).
 
-Programming polymorphically under an `Attoparsec p` constraint yields a DRY
-specification of both a parser and a printer.
-
 Monadic and applicative composition can be used under a `ForallF Monad p` constraint
 (resp. `ForallF Applicative p`), meaning that for all types `x`, the type `p x`
 is an instance of `Monad` (resp. `Applicative`). These constraints are made
-possible thanks to the `constraints` package. The `profunctor-monad` package 
-(not yet available; see `src/Data/Attoparsec/Unparse/Profunctor.hs`)
+possible thanks to the `constraints` package. The
+[`profunctor-monad`](https://github.com/Lysxia/profunctor-monad) package
 provides convenient ways to work with them (`with` or rebindable syntax).
-
-## Building
-
-Simply clone the repo' and build with stack:
-
-    stack install --test
 
 ## Examples
 
