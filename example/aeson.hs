@@ -1,12 +1,20 @@
 {-# LANGUAGE OverloadedStrings #-}
 
+import Data.Aeson (Value(..))
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
 import Data.Foldable (for_)
+import Test.QuickCheck
+import Test.QuickCheck.Instances ()
 
 import Data.Attoparsec.Unparse
 import AesonParser
+
+main :: IO ()
+main = do
+  testExamples
+  testProp
 
 examples :: [BS.ByteString]
 examples =
@@ -14,8 +22,8 @@ examples =
   , "{\"mu:ch\\\" doge\": [null, false, true, \"beautiful\"]}"
   ]
 
-main :: IO ()
-main = for_ examples $ \s -> do
+testExamples :: IO ()
+testExamples = for_ examples $ \s -> do
   v <- unwrap $ parse value s
   s'_ <- unwrap $ unparse value v
   let s' = LBS.toStrict s'_
@@ -38,3 +46,25 @@ assertEqual a a' ifFail =
     print a'
     ifFail
     fail "Failed"
+
+testProp :: IO ()
+testProp = quickCheck prop_printParse
+
+prop_printParse :: Value -> Property
+prop_printParse v = ioProperty $ do
+  s_ <- unwrap $ unparse value v
+  let s = LBS.toStrict s_
+  v' <- unwrap $ parse value s
+  pure (v === v')
+
+instance Arbitrary Value where
+  arbitrary = sized $ \n -> oneof $
+    [ pure Null
+    , Bool <$> arbitrary
+    , String <$> arbitrary
+    -- TODO: , Number <$> arbitrary
+    ] ++
+    if n == 0 then [] else fmap (resize (n `div` 2))
+    [ Array  <$> arbitrary
+    , Object <$> arbitrary
+    ]

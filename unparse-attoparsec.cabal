@@ -47,6 +47,8 @@ test-suite example-aeson
     mtl,
     profunctors,
     profunctor-monad,
+    QuickCheck,
+    quickcheck-instances,
     scientific,
     text,
     unordered-containers,
