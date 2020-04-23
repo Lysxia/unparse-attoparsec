@@ -16,21 +16,25 @@ examples =
 
 main :: IO ()
 main = for_ examples $ \s -> do
-  BS8.putStrLn s
   v <- unwrap $ parse value s
   s'_ <- unwrap $ unparse value v
   let s' = LBS.toStrict s'_
   v' <- unwrap $ parse value s'
-  assertEqual v v'
-  BS8.putStrLn s'
+  assertEqual v v' $ do
+    BS8.putStrLn s
+    BS8.putStrLn s'
 
 unwrap :: Either String b -> IO b
 unwrap (Right b) = pure b
 unwrap (Left a) = fail a
 
-assertEqual :: (Show a, Eq a) => a -> a -> IO ()
-assertEqual a a' =
+assertEqual :: (Show a, Eq a) => a -> a -> IO () -> IO ()
+assertEqual a a' ifFail =
   if a == a' then
     pure ()
-  else
-    fail $ "Not equal: " ++ show (a, a')
+  else do
+    putStrLn "Not equal:"
+    print a
+    print a'
+    ifFail
+    fail "Failed"

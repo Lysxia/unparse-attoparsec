@@ -22,6 +22,8 @@ import Data.Profunctor
 
 import Prelude hiding (take, takeWhile)
 
+import Profunctor.Monad.Partial
+
 type LazyByteString = LBS.ByteString
 type Builder = Builder.Builder
 
@@ -57,6 +59,13 @@ instance MonadFail (Printer x) where
 instance Profunctor Printer where
   lmap f (Printer p) = Printer (withReaderT f p)
   rmap = fmap
+
+instance ProfunctorPartial Printer where
+  cofail (Printer q) = Printer (ReaderT (\mx ->
+    case mx of
+      Just x -> runReaderT q x
+      Nothing -> lift (Left "cofail: failed")))
+
 
 unparse :: Printer x a -> x -> Either String LazyByteString
 unparse q x = fmap fst (unparse' q x)

@@ -1,7 +1,11 @@
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE ConstraintKinds #-}
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE MonoLocalBinds #-}
+{-# LANGUAGE
+    ApplicativeDo,
+    ConstraintKinds,
+    FlexibleContexts,
+    FlexibleInstances,
+    MonoLocalBinds,
+    QuantifiedConstraints,
+    UndecidableInstances #-}
 
 import Control.Applicative
 import Data.Char (isAlphaNum)
@@ -12,8 +16,8 @@ import qualified Data.ByteString.Char8 as BS8
 import qualified Data.ByteString.Lazy as LBS
 
 import Data.Attoparsec.Unparse hiding (Class)
-import Profunctor.Monad hiding (manyP, someP, sepByP, sepBy1P)
-import qualified Profunctor.Monad as PM
+import Profunctor.Monad.Partial
+import qualified Profunctor.Monad.NewCombinators as PM
 
 type Regex = AltRegex
 
@@ -128,28 +132,29 @@ data GClass
   | NotWord
   deriving (Eq, Ord, Show)
 
-type RegexParser p = (Attoparsec p, Alternative1 p)
+class    (Attoparsec p, forall x. Alternative (p x)) => RegexParser p
+instance (Attoparsec p, forall x. Alternative (p x)) => RegexParser p
 
 regex :: RegexParser p => J p Regex
-regex = withApplicative $ regex_ <* endOfInput
+regex = regex_ <* endOfInput
 
 regex_ :: RegexParser p => J p Regex
 regex_ = altRegex_
 
 altRegex_ :: RegexParser p => J p AltRegex
-altRegex_ = withFunctor $ AltRegex <$> unAltRegex =. sepByP seqRegex_ (word8 (c_ '|'))
+altRegex_ = AltRegex <$> unAltRegex =. sepByP seqRegex_ (word8 (c_ '|'))
 
 seqRegex_ :: RegexParser p => J p SeqRegex
-seqRegex_ = withFunctor $ SeqRegex <$> unSeqRegex =. manyP quantifiedRegex_
+seqRegex_ = SeqRegex <$> unSeqRegex =. manyP quantifiedRegex_
 
 quantifiedRegex_ :: RegexParser p => J p QuantifiedRegex
-quantifiedRegex_ = withApplicative $ do
+quantifiedRegex_ = do
   e <- unQuantify =. atomicRegex_
   q <- quantifier =. quantifier_
   return (QuantifiedRegex e q)
 
 quantifier_ :: RegexParser p => J p Quantifier
-quantifier_ = withAlternative $
+quantifier_ =
   asum (do
     (s, q) <-
       [ ("*?", Star Lazy), ("+?", Plus Lazy), ("??", Question Lazy)
@@ -162,11 +167,11 @@ quantifier_ = withAlternative $
   ) <|> pure None
 
 atomicRegex_ :: RegexParser p => J p AtomicRegex
-atomicRegex_ = withAlternative $
+atomicRegex_ =
   special_ <|> group_ <|> charClass_ <|> gClassE_ <|> char_
 
 group_ :: RegexParser p => J p AtomicRegex
-group_ = withApplicative $ do
+group_ = do
   _ <- assert "group" isGroup
   _ <- word8 (c_ '(')
   e <- groupBody =. regex_
@@ -174,70 +179,69 @@ group_ = withApplicative $ do
   return (Group e)
 
 charClass_ :: RegexParser p => J p AtomicRegex
-charClass_ = withApplicative $ do
+charClass_ = do
   _ <- assert "class" isClass
   _ <- word8 (c_ '[')
   t <- classType =. classType_
-  e <- classAtoms =. manyP (classAtom_ False)
+  e <- classAtoms =. manyP classAtom_
   _ <- word8 (c_ ']')
   return (Class t e)
 
 classType_ :: RegexParser p => J p ClassType
-classType_ = withAlternative $ exclude_ <|> include_
+classType_ = exclude_ <|> include_
 
 include_ :: RegexParser p => J p ClassType
-include_ = withApplicative $ pure Include
+include_ = pure Include
 
 exclude_ :: RegexParser p => J p ClassType
-exclude_ = withApplicative $ do
+exclude_ = do
   _ <- assert "exclude" isExclude
   _ <- word8 (c_ '^')
   return Exclude
 
-classAtom_ :: RegexParser p => Bool -> J p ClassAtom
-classAtom_ first = withAlternative $ cRange_ first <|> cChar_ first <|> cGClass_
+classAtom_ :: RegexParser p => J p ClassAtom
+classAtom_ = cRange_ <|> cChar_ <|> cGClass_
 
-cRange_ :: RegexParser p => Bool -> J p ClassAtom
-cRange_ first = withApplicative $ do
+cRange_ :: RegexParser p => J p ClassAtom
+cRange_ = do
   _ <- assert "range" isCRange
   start <- cRangeStart =. char0_
   _ <- word8 (c_ '-')
   end <- cRangeEnd =. char0_
   return (CRange start end)
 
-cChar_ :: RegexParser p => Bool -> J p ClassAtom
-cChar_ first = withApplicative $ do
+cChar_ :: RegexParser p => J p ClassAtom
+cChar_ = do
   _ <- assert "cchar" isCChar
   c <- unCChar =. char0_
   return (CChar c)
 
 cGClass_ :: RegexParser p => J p ClassAtom
-cGClass_ = withFunctor $ CGClass <$> unCGClass =. gClass_
+cGClass_ = CGClass <$> unCGClass =. gClass_
 
 char_ :: RegexParser p => J p AtomicRegex
-char_ = withApplicative $ do
+char_ = do
   _ <- assert "char" isChar
   c <- char =. char0_
   return (Char c)
 
 char0_ :: RegexParser p => J p Word8
-char0_ = withAlternative $
-  satisfy alphaNum <|> escapedChar_ (not . alphaNum)
+char0_ = satisfy alphaNum <|> escapedChar_ (not . alphaNum)
   where
     alphaNum = isAlphaNum . toEnum . fromEnum
 
 escapedChar_ :: RegexParser p => (Word8 -> Bool) -> J p Word8
-escapedChar_ p = withApplicative $
+escapedChar_ p =
   word8 (c_ '\\') *> satisfy p
 
 gClassE_ :: RegexParser p => J p AtomicRegex
-gClassE_ = withApplicative $ do
+gClassE_ = do
   _ <- assert "gclass" isGClass
   g <- unGClass =. gClass_
   return (GClass g)
 
 gClass_ :: RegexParser p => J p GClass
-gClass_ = withAlternative $
+gClass_ =
   word8 (c_ '\\') *>
   asum (do
     (c, g) <-
@@ -251,7 +255,7 @@ gClass_ = withAlternative $
       return g)
 
 special_ :: RegexParser p => J p AtomicRegex
-special_ = withAlternative $ asum $ do
+special_ = asum $ do
   (c, e) <- [ ('.', Dot), ('$', Dollar), ('^', Caret) ]
   return $ do
     _ <- assert "special" (== e)
@@ -275,22 +279,25 @@ examples = fmap BS8.pack
 
 main :: IO ()
 main = for_ examples $ \s -> do
-  BS8.putStrLn s
   v <- unwrap $ parse regex s
-  print v
   s'_ <- unwrap $ unparse regex v
   let s' = LBS.toStrict s'_
   v' <- unwrap $ parse regex s'
-  assertEqual v v'
-  BS8.putStrLn s'
+  assertEqual v v' $ do
+    BS8.putStrLn s
+    BS8.putStrLn s'
 
 unwrap :: Either String b -> IO b
 unwrap (Right b) = pure b
 unwrap (Left a) = fail a
 
-assertEqual :: (Show a, Eq a) => a -> a -> IO ()
-assertEqual a a' =
+assertEqual :: (Show a, Eq a) => a -> a -> IO () -> IO ()
+assertEqual a a' ifFail =
   if a == a' then
     pure ()
-  else
-    fail $ "Not equal: " ++ show (a, a')
+  else do
+    putStrLn "Not equal:"
+    print a
+    print a'
+    ifFail
+    fail "Failed"

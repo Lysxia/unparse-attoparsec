@@ -1,5 +1,7 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE TypeFamilies #-}
+{-# LANGUAGE
+    GeneralizedNewtypeDeriving,
+    QuantifiedConstraints,
+    TypeFamilies  #-}
 
 module Data.Attoparsec.Unparse.Profunctor where
 
@@ -15,9 +17,12 @@ import Data.Maybe (isJust)
 import Data.Profunctor
 import Prelude hiding (take, takeWhile)
 
+import Profunctor.Monad.Partial
+
 import Data.Attoparsec.Unparse.Printer
 
-class Profunctor p => Attoparsec p where
+-- Maybe should be Applicative
+class ProfunctorPartial p => Attoparsec p where
 
   -- Parsing individual bytes
 
@@ -112,6 +117,9 @@ parse (Parser p) = P.parseOnly p
 instance Profunctor Parser where
   lmap _ (Parser p) = Parser p
   rmap f (Parser p) = Parser (fmap f p)
+
+instance ProfunctorPartial Parser where
+  cofail (Parser p) = Parser p
 
 instance Attoparsec Parser where
   word8 = Parser . P.word8

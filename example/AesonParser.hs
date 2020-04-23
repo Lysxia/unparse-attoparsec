@@ -24,10 +24,12 @@ import Data.Word (Word8)
 import Data.Profunctor
 import GHC.Exts (Constraint)
 
+import Prelude hiding (head, tail)
+
+import Profunctor.Monad.Partial
+
 import qualified Data.Attoparsec.Unparse as A
 import qualified Data.Attoparsec.Unparse.Printer as AP
-
-type J p a = p a a
 
 pattern C :: Char -> Word8
 pattern C c <- (chr . fromIntegral -> c) where
@@ -54,9 +56,9 @@ objectValues str val =
       _ {- '"' or error -} -> loop []
   where
     loop acc = do
-      k <- head =. fst =. str <* skipSpace <* A.word8 (C ':')
-      v <- head =. snd =. val <* skipSpace
-      tail =. do
+      k <- headM =.? fst =. str <* skipSpace <* A.word8 (C ':')
+      v <- headM =.? snd =. val <* skipSpace
+      tailM =.? do
         ch <- nextWord (C ',') =. A.satisfy (\w -> w == C ',' || w == C '}')
         let acc' = (k, v) : acc
         case ch of
@@ -80,8 +82,8 @@ arrayValues val =
       False -> loop [] 1
   where
     loop acc !len = do
-      v <- head =. val <* skipSpace
-      tail =. do
+      v <- headM =.? val <* skipSpace
+      tailM =.? do
         ch <- nextWord' =. A.satisfy (\w -> w == C ',' || w == C ']')
         let acc' = v : acc
         case ch of
@@ -167,7 +169,10 @@ scientific = A.parseOrPrint undefined undefined
 
 -- Find a home for this
 
-(=.) :: Profunctor p => (y -> x) -> p x a -> p y a
-(=.) = lmap
+headM :: [a] -> Maybe a
+headM [] = Nothing
+headM (x : _) = Just x
 
-infixl 5 =.
+tailM :: [a] -> Maybe [a]
+tailM [] = Nothing
+tailM (_ : xs) = Just xs
